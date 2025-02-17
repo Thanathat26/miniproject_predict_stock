@@ -1,4 +1,4 @@
-Miniproject📌 : web stock predict
+Miniproject📌 : web stock predict (lstm)
 ===
 
 
