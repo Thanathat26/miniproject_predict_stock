@@ -19,11 +19,11 @@ def index():
     if request.method == 'POST':
         stock = request.form.get('stock')
         if not stock:
-            stock = 'POWERGRID.NS'  # Default stock if none is entered
+            stock = 'NVDA'  # Default stock if none is entered
         
         # Define the start and end dates for stock data
         start = dt.datetime(2000, 1, 1)
-        end = dt.datetime(2024, 10, 1)
+        end = dt.datetime(2025, 3, 3)
         
         # Download stock data
         df = yf.download(stock, start=start, end=end)
@@ -47,7 +47,7 @@ def index():
         
         # Prepare data for prediction
         past_100_days = data_training.tail(100)
-        final_df = past_100_days.append(data_testing, ignore_index=True)
+        final_df = pd.concat([past_100_days, data_testing], ignore_index=True)  # Changed to concat
         input_data = scaler.fit_transform(final_df)
         
         x_test, y_test = [], []
@@ -64,6 +64,22 @@ def index():
         scale_factor = 1 / scaler[0]
         y_predicted = y_predicted * scale_factor
         y_test = y_test * scale_factor
+        
+        # คำนวณค่าราคาล่าสุดและค่าที่ทำนาย
+        last_actual_price = y_test[-1]  # ราคาจริงล่าสุด
+        last_predicted_price = y_predicted[-1][0]  # ราคาที่ทำนายล่าสุด
+
+        # คำนวณความแตกต่างและเปอร์เซ็นต์การเปลี่ยนแปลง
+        price_difference = last_predicted_price - last_actual_price
+        percent_change = (price_difference / last_actual_price) * 100
+
+        # เก็บข้อมูลเพื่อแสดงในเว็บ
+        prediction_data = {
+            'current_price': round(last_actual_price, 2),
+            'predicted_price': round(last_predicted_price, 2),
+            'price_difference': round(price_difference, 2),
+            'percent_change': round(percent_change, 2)
+        }
         
         # Plot 1: Closing Price vs Time Chart with 20 & 50 Days EMA
         fig1, ax1 = plt.subplots(figsize=(12, 6))
@@ -113,7 +129,8 @@ def index():
                                plot_path_ema_100_200=ema_chart_path_100_200, 
                                plot_path_prediction=prediction_chart_path, 
                                data_desc=data_desc.to_html(classes='table table-bordered'),
-                               dataset_link=csv_file_path)
+                               dataset_link=csv_file_path,
+                               prediction_data=prediction_data)
 
     return render_template('index.html')
 
