@@ -80,6 +80,53 @@ def index():
             'percent_change': round(percent_change, 2)
         }
         
+        scaler_full = MinMaxScaler(feature_range=(0, 1))
+        scaled_data = scaler_full.fit_transform(df[['Close']])
+        last_100_days = scaled_data[-100:]
+        future_predictions = []
+        current_batch = last_100_days.reshape(1, 100, 1)
+        
+        for i in range(30):
+            # ทำนายค่าถัดไป
+            future_pred = model.predict(current_batch)[0]
+            # เพิ่มค่าที่ทำนายเข้าไปในลิสต์
+            future_predictions.append(future_pred[0])
+            # ปรับปรุง batch เพื่อทำนายวันถัดไป
+            current_batch = np.append(current_batch[:, 1:, :], [[future_pred]], axis=1)
+            
+        # แปลงค่ากลับจาก scaled
+        scale_factor_full = 1 / scaler_full.scale_[0]
+        future_predictions = np.array(future_predictions) * scale_factor_full
+        
+        # สร้างวันที่สำหรับการทำนาย
+        last_date = df.index[-1]
+        prediction_dates = pd.date_range(start=last_date + pd.Timedelta(days=30), periods=30, freq='B') 
+        
+        # สร้างตารางข้อมูลสำหรับแสดงผล
+        future_df = pd.DataFrame({
+            'Date': prediction_dates,
+            'Predicted_Price': future_predictions
+        })
+        
+        # บันทึกข้อมูลทำนายในอนาคตลงไฟล์ CSV
+        future_csv_path = f"static/{stock}_future_predictions.csv"
+        future_df.to_csv(future_csv_path)
+        
+        # สร้างกราฟการทำนายในอนาคต
+        fig4, ax4 = plt.subplots(figsize=(12, 6))
+        # แสดงข้อมูลจริง 30 วันล่าสุด
+        ax4.plot(df.index[-30:], df['Close'].values[-30:], 'b', label="Actual Price (Last 30 Days)", linewidth=2)
+        # แสดงข้อมูลทำนาย 30 วันในอนาคต
+        ax4.plot(prediction_dates, future_predictions, 'r', label="Predicted Price (Next 30 Days)", linewidth=2)
+        ax4.axvline(x=last_date, color='g', linestyle='--', label="Current Date")
+        ax4.set_title(f"{stock} - 30 Day Future Price Prediction")
+        ax4.set_xlabel("Date")
+        ax4.set_ylabel("Price")
+        ax4.legend()
+        future_chart_path = "static/future_prediction.png"
+        fig4.savefig(future_chart_path)
+        plt.close(fig4)
+        
         # Plot 1: Closing Price vs Time Chart with 20 & 50 Days EMA
         fig1, ax1 = plt.subplots(figsize=(12, 6))
         ax1.plot(df.Close, 'y', label='Closing Price')
@@ -127,9 +174,12 @@ def index():
                                plot_path_ema_20_50=ema_chart_path, 
                                plot_path_ema_100_200=ema_chart_path_100_200, 
                                plot_path_prediction=prediction_chart_path, 
+                               plot_path_future=future_chart_path,
                                data_desc=data_desc.to_html(classes='table table-bordered'),
                                dataset_link=csv_file_path,
-                               prediction_data=prediction_data)
+                               future_dataset_link=future_csv_path,
+                               prediction_data=prediction_data,
+                               future_df=future_df.to_html(classes='table table-bordered'))
 
     return render_template('index.html')
 
