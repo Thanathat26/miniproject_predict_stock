@@ -12,8 +12,7 @@ plt.style.use("fivethirtyeight")
 app = Flask(__name__)
 
 # Load the model (make sure your model is in the correct path)
-model = load_model('stock_dl_model.h5')
-
+model = load_model(r'C:\Users\tphon\Desktop\New folder_2\miniproject_predict_stock\stock_dl_model.h5')
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -67,7 +66,7 @@ def index():
         
         # คำนวณค่าราคาล่าสุดและค่าที่ทำนาย
         last_actual_price = y_test[-1]  # ราคาจริงล่าสุด
-        last_predicted_price = y_predicted[-1][0]  # ราคาที่ทำนายล่าสุด
+        last_predicted_price = y_predicted[-1][0] # ราคาที่ทำนายล่าสุด
 
         # คำนวณความแตกต่างและเปอร์เซ็นต์การเปลี่ยนแปลง
         price_difference = last_predicted_price - last_actual_price
